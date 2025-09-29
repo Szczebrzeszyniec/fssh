@@ -12,18 +12,8 @@ import getpass
 import tty, termios
 import subprocess
 
-# sie jeszcze helpa dorobi i te passy czea szyfrować ale to od huja roboty
-# przykład konfiguracji:
-# serwer1:
-#   ipLAN: 192.168.1.71
-#   ipWAN: firepro.edu.pl
-#   ipPREF: LAN
-#   port: '6741'
-#   login: zbyszek
-#   passwd: gitesmajonez2137
-
 USER = getpass.getuser()
-CONF = os.path.join(f"/home/{USER}", "conf.yaml")
+CONF = os.path.join(f"/home/{USER}", ".fssh.yaml")
 
 
 def read(key):
@@ -91,9 +81,7 @@ def ssh(host, ctype):
     finally:
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
         client.close()
-        # print("ESC or CTRL+D to exit")
         os.system("clear")
-        os.system("/bin/bash")
 
 def addHost():
     while True:
@@ -122,6 +110,32 @@ def addHost():
         else:
             print("Error: name/password/login cannot be empty")
 
+def help():
+    print("""---------->
+    fssh @<host>
+        connect to host
+
+    fssh a, add
+        add host to config
+        (configuration wizard)
+
+    fssh e, edit
+        edit directly with nano
+
+    fssh h, help
+        print help menu
+
+    configuration example
+    serwer1:
+      ipLAN: 192.168.1.71
+      ipWAN: firepro.edu.pl
+      ipPREF: LAN
+      port: '6741'
+      login: zbyszek
+      passwd: gitesmajonez2137
+---------->
+""")
+
 
 def argsy(arg):
     arg = arg[1:]
@@ -145,10 +159,12 @@ def argsy(arg):
             ssh(host, "LAN")
         else:
             ssh(host, "PREF")
-    elif (first and first.lower() in ("-a", "-add", "add")):
+    elif (first and first.lower() in ("a", "add")):
         addHost() 
-    elif (first and first.lower() in ("-e", "-edit", "edit")):
+    elif (first and first.lower() in ("e", "edit")):
         subprocess.Popen(f'nano {CONF}', shell=True, stdout=sys.stdout, stderr=sys.stderr).wait()
+    elif (first and first.lower() in ("h", "help")):
+        help()
     else:
         print("wrong arg :(")
 
@@ -162,18 +178,9 @@ def main():
     check()
     # print(readAll())
     if(len(sys.argv) == 1):
-        print('typie jakaś argumentacja?')
+        help()
         # print(sys.argv)
     argsy(sys.argv)
 
 if __name__ == "__main__":
     main()
-
-#     elif first in ("-h", "--help"):
-#         print("""
-# ogólnie to huja ci pomoge
-# ale wierze w ciebie
-# poradzisz se
-# pa zbyszku
-# """)
-    # print(arg)
