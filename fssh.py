@@ -12,6 +12,10 @@ import getpass
 import tty, termios
 import subprocess
 
+sys.stderr.flush()
+fd = os.open(os.devnull, os.O_WRONLY)
+os.dup2(fd, sys.stderr.fileno())
+
 USER = getpass.getuser()
 CONF = os.path.join(f"/home/{USER}", ".fssh.yaml")
 
@@ -52,18 +56,22 @@ def ssh(host, ctype):
     host_ip = hostp[f"ip{ctype}"]
     passwd = hostp["passwd"]
 
+    client = None
+    old_settings = None
+    chan = None
+
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
-        client.connect(hostname=host_ip, port=port, username=user, password=passwd, timeout=10)
+        client.connect(hostname=host_ip, port=port, username=user, password=passwd, timeout=5)
         chan = client.invoke_shell()
         time.sleep(0.5)
         if chan.recv_ready():
             sys.stdout.write(chan.recv(4096).decode())
             sys.stdout.flush()
-
-        old_settings = termios.tcgetattr(sys.stdin)
-        tty.setcbreak(sys.stdin.fileno())
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        tty.setcbreak(fd)
 
         while True:
             if chan.recv_ready():
@@ -76,12 +84,19 @@ def ssh(host, ctype):
                     break
                 chan.send(c)
 
+
     except Exception as e:
         print("SSH error:", e)
     finally:
-        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
-        client.close()
+        try:
+            if old_settings is not None:
+                termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, old_settings)
+        except Exception:
+            print("failed to restore terminal settings")
+        if client is not None:
+            client.close()
         os.system("clear")
+
 
 def addHost():
     while True:
@@ -108,10 +123,10 @@ def addHost():
             write(name, conf)
             break
         else:
-            print("Error: name/password/login cannot be empty")
+            print("name/password/login cannot be empty")
 
 def help():
-    print("""---------->
+    print("""
     fssh @<host>
         connect to host
 
@@ -121,6 +136,12 @@ def help():
 
     fssh e, edit
         edit directly with nano
+          
+    fssh l, list
+        list hosts from config
+          
+    fssh c, conf
+        show config path
 
     fssh h, help
         print help menu
@@ -133,9 +154,15 @@ def help():
       port: '6741'
       login: zbyszek
       passwd: gitesmajonez2137
----------->
-""")
 
+""")
+    
+def confList():
+    hosts = readAll()
+    print("")
+    for i in hosts:
+        print(f'@{i}')
+    print("")
 
 def argsy(arg):
     arg = arg[1:]
@@ -150,7 +177,7 @@ def argsy(arg):
         host = first[1:]
 
         if host not in valid:
-            print(f"Error: '{host}' is not a valid host.")
+            print(f"'{host}' is not a valid host.")
             return
 
         if second and second.lower() in ("wan", "-w"):
@@ -162,9 +189,15 @@ def argsy(arg):
     elif (first and first.lower() in ("a", "add")):
         addHost() 
     elif (first and first.lower() in ("e", "edit")):
-        subprocess.Popen(f'nano {CONF}', shell=True, stdout=sys.stdout, stderr=sys.stderr).wait()
+        subprocess.Popen(f'nano {CONF}', shell=True, stdout=sys.stdout, stderr=subprocess.DEVNULL).wait()
     elif (first and first.lower() in ("h", "help")):
         help()
+    elif (first and first.lower() in ("l", "list")):
+        confList()
+    elif (first and first.lower() in ("c", "conf")):
+        print("")
+        print(CONF)
+        print("")
     else:
         print("wrong arg :(")
 
@@ -176,10 +209,8 @@ def argsy(arg):
 
 def main():
     check()
-    # print(readAll())
     if(len(sys.argv) == 1):
         help()
-        # print(sys.argv)
     argsy(sys.argv)
 
 if __name__ == "__main__":
