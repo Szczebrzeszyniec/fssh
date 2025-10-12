@@ -3,15 +3,8 @@ set -e
 
 chmod +x ./fssh.py
 
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    target="/usr/local/bin/fssh"
-    sudo mkdir -p /usr/local/bin
-else
-    target="/usr/bin/fssh"
-fi
-
-sudo cp -f ./fssh.py "$target"
-sudo chmod 755 "$target"
+sudo cp -f ./fssh.py /usr/bin/fssh
+sudo chmod 755 /usr/bin/fssh
 
 echo
-echo "install your system package for python-paramiko and python-termios"
+echo "install your system package for python-paramiko and python-yaml"

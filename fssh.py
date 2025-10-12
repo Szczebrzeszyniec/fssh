@@ -11,13 +11,15 @@ import select
 import getpass
 import tty, termios
 import subprocess
+import platform
 
-sys.stderr.flush()
-fd = os.open(os.devnull, os.O_WRONLY)
-os.dup2(fd, sys.stderr.fileno())
+if (not platform.system() == "Darwin"):
+    sys.stderr.flush()
+    fd = os.open(os.devnull, os.O_WRONLY)
+    os.dup2(fd, sys.stderr.fileno())
 
 USER = getpass.getuser()
-CONF = os.path.join(f"/home/{USER}", ".fssh.yaml")
+CONF = os.path.expanduser("~/.fssh.yaml")
 
 
 def read(key):
@@ -117,7 +119,7 @@ def addHost():
         if (port == ""):
             port = "22"
         login = input("username): ").strip()
-        passwd = getpass.getpass("password: ").strip()
+        passwd = getpass.getpass("password: ", stream=sys.stdout).strip()
         if name and passwd and port and login:
             conf = {"ipLAN": hostLAN, "ipWAN": hostWAN, "ipPREF": hostPREF, "port": port, "login": login, "passwd": passwd}
             write(name, conf)
