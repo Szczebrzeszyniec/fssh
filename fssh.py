@@ -13,11 +13,6 @@ import tty, termios
 import subprocess
 import platform
 
-if (not platform.system() == "Darwin"):
-    sys.stderr.flush()
-    fd = os.open(os.devnull, os.O_WRONLY)
-    os.dup2(fd, sys.stderr.fileno())
-
 USER = getpass.getuser()
 CONF = os.path.expanduser("~/.fssh.yaml")
 
